@@ -9,12 +9,12 @@ description: |
 confinement: strict
 compression: lzo
 grade: stable
-base: core22
+base: core24
 
 apps:
   iot-example-graphical-snap:
     command-chain: &_command-chain
-      - bin/graphics-core22-wrapper
+      - bin/gpu-2404-wrapper
       - bin/wayland-launch
     command: &_command # Command to launch your application
     plugs: &_plugs
@@ -35,12 +35,12 @@ apps:
 
 # This is one of four snippets that relate to providing the userspace graphics needed by your application.
 # You can treat this as "magic" so long as you don't need to make changes.
-# On the Mir website there's a lot more detail on [the graphics-core22 Snap interface](https://mir-server.io/docs/the-graphics-core22-snap-interface) and it's use.
+# On the Mir website there's a lot more detail on [the gpu-2404 Snap interface](https://mir-server.io/docs/the-gpu-2404-snap-interface) and it's use.
 plugs:
-  graphics-core22:
+  gpu-2404:
     interface: content
-    target: $SNAP/graphics
-    default-provider: mesa-core22
+    target: $SNAP/gpu-2404
+    default-provider: mesa-2404
 
 environment:
   # Other, generally useful environment settings...
@@ -55,9 +55,9 @@ environment:
 # The `layout` ensures that files can be found by applications where they are expected by the toolkit or application.
 layout:
   /usr/share/libdrm:
-    bind: $SNAP/graphics/libdrm
+    bind: $SNAP/gpu-2404/libdrm
   /usr/share/drirc.d:
-    symlink: $SNAP/graphics/drirc.d
+    symlink: $SNAP/gpu-2404/drirc.d
   # Other, generally useful paths
   /usr/share/fonts:
     bind: $SNAP/usr/share/fonts
@@ -68,10 +68,10 @@ layout:
   /etc/fonts:
     bind: $SNAP/etc/fonts
   # GTK
-  /usr/lib/$CRAFT_ARCH_TRIPLET/gdk-pixbuf-2.0:
-    bind: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET/gdk-pixbuf-2.0
-  /usr/lib/${CRAFT_ARCH_TRIPLET}/gtk-3.0:
-    bind: $SNAP/usr/lib/${CRAFT_ARCH_TRIPLET}/gtk-3.0
+  /usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/gdk-pixbuf-2.0:
+    bind: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/gdk-pixbuf-2.0
+  /usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/gtk-3.0:
+    bind: $SNAP/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/gtk-3.0
   /usr/share/mime:
     bind: $SNAP/usr/share/mime
   /etc/gtk-3.0:
@@ -94,8 +94,8 @@ parts:
       # Update mime database
       update-mime-database ${CRAFT_PART_INSTALL}/usr/share/mime
       # build immodules cache
-      mkdir -p ${CRAFT_PART_INSTALL}/usr/lib/${CRAFT_ARCH_TRIPLET}/gtk-3.0/3.0.0/
-      /usr/lib/${CRAFT_ARCH_TRIPLET}/libgtk-3-0/gtk-query-immodules-3.0 > ${CRAFT_PART_INSTALL}/usr/lib/${CRAFT_ARCH_TRIPLET}/gtk-3.0/3.0.0/immodules.cache
+      mkdir -p ${CRAFT_PART_INSTALL}/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/gtk-3.0/3.0.0/
+      /usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/libgtk-3-0t64/gtk-query-immodules-3.0 > ${CRAFT_PART_INSTALL}/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/gtk-3.0/3.0.0/immodules.cache
     stage-packages:
       - librsvg2-common
       - gsettings-desktop-schemas
@@ -103,10 +103,10 @@ parts:
     override-prime: |
       craftctl default
       # Compile the gsettings schemas
-      /usr/lib/${CRAFT_ARCH_TRIPLET}/glib-2.0/glib-compile-schemas "$CRAFT_PRIME/usr/share/glib-2.0/schemas"
+      /usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/glib-2.0/glib-compile-schemas "$CRAFT_PRIME/usr/share/glib-2.0/schemas"
       # Index the pixbuf loaders
-      LOADERS_PATH=$(echo ${CRAFT_PRIME}/usr/lib/${CRAFT_ARCH_TRIPLET}/gdk-pixbuf-2.0/*/loaders)
-      QUERY_LOADERS=/usr/lib/${CRAFT_ARCH_TRIPLET}/gdk-pixbuf-2.0/gdk-pixbuf-query-loaders
+      LOADERS_PATH=$(echo ${CRAFT_PRIME}/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/gdk-pixbuf-2.0/*/loaders)
+      QUERY_LOADERS=/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_ON}/gdk-pixbuf-2.0/gdk-pixbuf-query-loaders
       GDK_PIXBUF_MODULEDIR=${LOADERS_PATH} ${QUERY_LOADERS} > ${LOADERS_PATH}/../loaders.cache
       sed s!$CRAFT_PRIME!!g --in-place ${LOADERS_PATH}/../loaders.cache
 
@@ -117,31 +117,31 @@ parts:
     override-build: |
       # The plugs needed to run Wayland. (wayland-launch checks them, setup.sh connects them)
       # You may add further plugs here if you want these options
-      PLUGS="opengl wayland graphics-core22"
+      PLUGS="opengl wayland gpu-2404"
       sed --in-place "s/%PLUGS%/$PLUGS/g" $CRAFT_PART_BUILD/bin/wayland-launch
       sed --in-place "s/%PLUGS%/$PLUGS/g" $CRAFT_PART_BUILD/bin/setup.sh
       craftctl default
     stage-packages:
       - inotify-tools
 
-  graphics-core22:
+  gpu-2404:
     after:
       # Your application packaging
       - gsettings+pixbuf+immodules
       - setup
-    source: https://github.com/MirServer/graphics-core22.git
+    source: https://github.com/canonical/gpu-snap.git
     plugin: dump
     override-prime: |
       craftctl default
-      ${CRAFT_PART_SRC}/bin/graphics-core22-cleanup mesa-core22 nvidia-core22
+      ${CRAFT_PART_SRC}/bin/gpu-2404-cleanup mesa-2404
       cd "$CRAFT_PRIME/usr/share/"
       rm -rf bug drirc.d glvnd libdrm lintian man
       rm -rf applications apport bash-completion dbus-1 doc-base doc gtk-doc\
              help pkgconfig libthai metainfo themes thumbnailers xml
     prime:
-      - bin/graphics-core22-wrapper
+      - bin/gpu-2404-wrapper
 
-architectures:
-  - build-on: amd64
-  - build-on: armhf
-  - build-on: arm64
+platforms:
+  amd64:
+  armhf:
+  arm64:
