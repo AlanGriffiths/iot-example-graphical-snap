@@ -1,0 +1,6 @@
+#!/bin/sh
+set -x
+
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH:+$LD_LIBRARY_PATH:}$SNAP/usr/lib/x86_64-linux-gnu/pulseaudio
+
+exec "$@"
